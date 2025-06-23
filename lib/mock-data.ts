@@ -59,7 +59,7 @@ export function generateDemoTables(): Table[] {
       x: 400,
       y: 380,
       shape: "rectangular",
-      seatCount: 10,
+      seatCount: 16,
       width: 220,
       height: 100,
       name: "Sponsors Table",
@@ -87,17 +87,6 @@ export function generateDemoTables(): Table[] {
       name: "Table 5",
     },
     // General Seating - Rectangular Table
-    {
-      id: "demo-table-6",
-      x: 420,
-      y: 560,
-      shape: "rectangular",
-      seatCount: 6,
-      width: 180,
-      height: 90,
-      name: "Table 6",
-    },
-    // Networking Table (small round)
   ];
 }
 
@@ -108,9 +97,7 @@ export function generateDemoAssignments(
   const assignments: SeatAssignment[] = [];
   let personIndex = 0;
 
-  // Assign people to tables with some seats left empty for demo purposes
   tables.forEach((table) => {
-    // Fill about 60-80% of seats to show both occupied and empty states
     const seatsToFill = Math.floor(
       table.seatCount * (0.6 + Math.random() * 0.2)
     );

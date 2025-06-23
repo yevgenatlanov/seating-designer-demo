@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useCallback, useState } from "react"
-import { TableComponent } from "./table-component"
-import { StageComponent } from "./stage-component"
-import type { Table, Stage, Person } from "@/lib/types"
-import { Button } from "@/components/ui/button"
-import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react"
+import { useCallback, useState } from "react";
+import { TableComponent } from "./table-component";
+import { StageComponent } from "./stage-component";
+import type { Table, Stage, Person } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { ZoomIn, ZoomOut, RotateCcw } from "lucide-react";
 
 interface CanvasProps {
-  tables: Table[]
-  stage: Stage
-  selectedItem: string | null
-  onSelectItem: (id: string | null) => void
-  onUpdateTable: (id: string, updates: Partial<Table>) => void
-  onUpdateStage: (updates: Partial<Stage>) => void
-  onSeatClick: (tableId: string, seatIndex: number) => void
-  getPersonForSeat: (tableId: string, seatIndex: number) => Person | null
+  tables: Table[];
+  stage: Stage;
+  selectedItem: string | null;
+  onSelectItem: (id: string | null) => void;
+  onUpdateTable: (id: string, updates: Partial<Table>) => void;
+  onUpdateStage: (updates: Partial<Stage>) => void;
+  onSeatClick: (tableId: string, seatIndex: number) => void;
+  getPersonForSeat: (tableId: string, seatIndex: number) => Person | null;
 }
 
 export function Canvas({
@@ -31,81 +31,72 @@ export function Canvas({
   getPersonForSeat,
 }: CanvasProps) {
   const [dragState, setDragState] = useState<{
-    isDragging: boolean
-    dragId: string | null
-    offset: { x: number; y: number }
+    isDragging: boolean;
+    dragId: string | null;
+    offset: { x: number; y: number };
   }>({
     isDragging: false,
     dragId: null,
     offset: { x: 0, y: 0 },
-  })
+  });
 
-  const [zoom, setZoom] = useState(1)
-  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 })
+  const [zoom, setZoom] = useState(1);
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
 
   const handleZoomIn = useCallback(() => {
-    setZoom((prev) => Math.min(prev + 0.2, 3))
-  }, [])
+    setZoom((prev) => Math.min(prev + 0.2, 3));
+  }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoom((prev) => Math.max(prev - 0.2, 0.5))
-  }, [])
+    setZoom((prev) => Math.max(prev - 0.2, 0.5));
+  }, []);
 
   const handleResetZoom = useCallback(() => {
-    setZoom(1)
-    setPanOffset({ x: 0, y: 0 })
-  }, [])
+    setZoom(1);
+    setPanOffset({ x: 0, y: 0 });
+  }, []);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent, id: string, currentX: number, currentY: number) => {
-      e.preventDefault()
-      const rect = e.currentTarget.getBoundingClientRect()
-      const offsetX = e.clientX - rect.left
-      const offsetY = e.clientY - rect.top
+      e.preventDefault();
+      const rect = e.currentTarget.getBoundingClientRect();
+      const offsetX = e.clientX - rect.left;
+      const offsetY = e.clientY - rect.top;
 
       setDragState({
         isDragging: true,
         dragId: id,
         offset: { x: offsetX, y: offsetY },
-      })
-      onSelectItem(id)
+      });
+      onSelectItem(id);
     },
-    [onSelectItem],
-  )
+    [onSelectItem]
+  );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!dragState.isDragging || !dragState.dragId) return
+      if (!dragState.isDragging || !dragState.dragId) return;
 
-      const rect = e.currentTarget.getBoundingClientRect()
-      const x = e.clientX - rect.left - dragState.offset.x
-      const y = e.clientY - rect.top - dragState.offset.y
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left - dragState.offset.x;
+      const y = e.clientY - rect.top - dragState.offset.y;
 
       if (dragState.dragId === "stage") {
-        onUpdateStage({ x, y })
+        onUpdateStage({ x, y });
       } else {
-        onUpdateTable(dragState.dragId, { x, y })
+        onUpdateTable(dragState.dragId, { x, y });
       }
     },
-    [dragState, onUpdateTable, onUpdateStage],
-  )
+    [dragState, onUpdateTable, onUpdateStage]
+  );
 
   const handleMouseUp = useCallback(() => {
     setDragState({
       isDragging: false,
       dragId: null,
       offset: { x: 0, y: 0 },
-    })
-  }, [])
-
-  const handleCanvasClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === e.currentTarget) {
-        onSelectItem(null)
-      }
-    },
-    [onSelectItem],
-  )
+    });
+  }, []);
 
   return (
     <div className="relative w-full h-full bg-gray-50 overflow-hidden">
@@ -120,7 +111,9 @@ export function Canvas({
         <Button variant="outline" size="sm" onClick={handleZoomIn}>
           <ZoomIn className="h-4 w-4" />
         </Button>
-        <div className="px-2 py-1 bg-white border rounded text-sm">{Math.round(zoom * 100)}%</div>
+        <div className="px-2 py-1 bg-white border rounded text-sm">
+          {Math.round(zoom * 100)}%
+        </div>
       </div>
 
       {/* Canvas with zoom transform */}
@@ -132,11 +125,20 @@ export function Canvas({
         }}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onClick={handleCanvasClick}
+        onClick={(e) => {
+          const target = e.target as HTMLElement;
+          const isCanvasBackground =
+            target === e.currentTarget ||
+            target.classList.contains("canvas-background");
+
+          if (isCanvasBackground) {
+            onSelectItem(null);
+          }
+        }}
       >
         {/* Grid pattern */}
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-20 canvas-background"
           style={{
             backgroundImage: `
             linear-gradient(rgba(0,0,0,0.1) 1px, transparent 1px),
@@ -147,6 +149,7 @@ export function Canvas({
             height: "200%",
             left: "-50%",
             top: "-50%",
+            pointerEvents: "auto",
           }}
         />
 
@@ -173,13 +176,17 @@ export function Canvas({
         {/* Instructions */}
         {tables.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-center text-gray-400">
-              <p className="text-lg font-medium">Welcome to Seating Map Designer</p>
-              <p className="text-sm mt-2">Add tables from the sidebar to get started</p>
+            <div className="text-center text-gray-400 pointer-events-auto canvas-background">
+              <p className="text-lg font-medium">
+                Welcome to Seating Map Designer
+              </p>
+              <p className="text-sm mt-2">
+                Add tables from the sidebar to get started
+              </p>
             </div>
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
