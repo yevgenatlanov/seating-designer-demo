@@ -1,104 +1,123 @@
-import jsPDF from "jspdf"
-import html2canvas from "html2canvas"
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export async function generatePDF(canvasElement: HTMLElement, data: any) {
   try {
-    // Capture the canvas as an image
+    // Capture canvas as a screenshot
     const canvas = await html2canvas(canvasElement, {
-      backgroundColor: "#f9fafb",
+      backgroundColor: "#ffffff",
       scale: 2,
-    })
+      useCORS: true,
+    });
 
-    const imgData = canvas.toDataURL("image/png")
-    const pdf = new jsPDF("l", "mm", "a4") // landscape orientation
+    const imgData = canvas.toDataURL("image/png");
 
-    // Add title
-    pdf.setFontSize(20)
-    pdf.text("Seating Map", 20, 20)
+    // Convert canvas px to mm
+    const pxToMm = (px: number) => (px * 25.4) / 96;
+    const widthMm = pxToMm(canvas.width);
+    const heightMm = pxToMm(canvas.height);
 
-    // Add the seating chart image
-    const imgWidth = 250
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    pdf.addImage(imgData, "PNG", 20, 30, imgWidth, imgHeight)
+    const pdf = new jsPDF({
+      orientation: widthMm > heightMm ? "landscape" : "portrait",
+      unit: "mm",
+      format: [widthMm, heightMm],
+    });
 
-    // Add guest list on a new page
-    pdf.addPage()
-    pdf.setFontSize(16)
-    pdf.text("Guest List", 20, 20)
+    // Page 1: Canvas Screenshot
+    pdf.addImage(imgData, "PNG", 0, 0, widthMm, heightMm);
 
-    let yPosition = 35
-    const lineHeight = 8
+    // Page 2: Guest List
+    pdf.addPage("a4", "portrait");
+    pdf.setFontSize(16);
+    pdf.text("Guest List", 20, 20);
 
-    // Group assignments by table
-    const tableAssignments = new Map()
+    let yPosition = 35;
+    const lineHeight = 8;
+
+    // Group guests by table
+    const tableAssignments = new Map();
     data.seatAssignments.forEach((assignment: any) => {
       if (!tableAssignments.has(assignment.tableId)) {
-        tableAssignments.set(assignment.tableId, [])
+        tableAssignments.set(assignment.tableId, []);
       }
-      const person = data.people.find((p: any) => p.id === assignment.personId)
+
+      const person = data.people.find((p: any) => p.id === assignment.personId);
       if (person) {
         tableAssignments.get(assignment.tableId).push({
           ...person,
           seatIndex: assignment.seatIndex,
-        })
+        });
       }
-    })
+    });
 
-    // List assignments by table
+    // Table-by-table listing
     tableAssignments.forEach((assignments, tableId) => {
-      const tableIndex = data.tables.findIndex((t: any) => t.id === tableId) + 1
-      const tableName = data.tables.find((t: any) => t.id === tableId)?.name || `Table ${tableIndex}`
+      const tableIndex =
+        data.tables.findIndex((t: any) => t.id === tableId) + 1;
+      const tableName =
+        data.tables.find((t: any) => t.id === tableId)?.name ||
+        `Table ${tableIndex}`;
 
-      pdf.setFontSize(12)
-      pdf.text(`${tableName}:`, 20, yPosition)
-      yPosition += lineHeight
+      pdf.setFontSize(12);
+      pdf.text(`${tableName}:`, 20, yPosition);
+      yPosition += lineHeight;
 
-      assignments.sort((a: any, b: any) => a.seatIndex - b.seatIndex)
+      assignments.sort((a: any, b: any) => a.seatIndex - b.seatIndex);
       assignments.forEach((person: any) => {
-        const seatNumber = `t${tableIndex}-s${person.seatIndex + 1}`
-        pdf.setFontSize(10)
-        pdf.text(`  ${seatNumber}: ${person.name} - ${person.title}, ${person.company}`, 25, yPosition)
-        yPosition += lineHeight - 1
+        const seatLabel = `t${tableIndex}-s${person.seatIndex + 1}`;
+        pdf.setFontSize(10);
+        pdf.text(
+          `  ${seatLabel}: ${person.name} - ${person.title}, ${person.company}`,
+          25,
+          yPosition
+        );
+        yPosition += lineHeight - 1;
 
         if (yPosition > 280) {
-          // Near bottom of page
-          pdf.addPage()
-          yPosition = 20
+          pdf.addPage();
+          yPosition = 20;
         }
-      })
-      yPosition += 3 // Extra space between tables
-    })
+      });
 
-    // List unassigned people
-    const assignedPersonIds = new Set(data.seatAssignments.map((a: any) => a.personId))
-    const unassignedPeople = data.people.filter((p: any) => !assignedPersonIds.has(p.id))
+      yPosition += 3;
+    });
 
-    if (unassignedPeople.length > 0) {
+    // Unassigned guests
+    const assignedIds = new Set(
+      data.seatAssignments.map((a: any) => a.personId)
+    );
+    const unassigned = data.people.filter((p: any) => !assignedIds.has(p.id));
+
+    if (unassigned.length > 0) {
       if (yPosition > 250) {
-        pdf.addPage()
-        yPosition = 20
+        pdf.addPage();
+        yPosition = 20;
       }
 
-      pdf.setFontSize(12)
-      pdf.text("Unassigned Guests:", 20, yPosition)
-      yPosition += lineHeight
+      pdf.setFontSize(12);
+      pdf.text("Unassigned Guests:", 20, yPosition);
+      yPosition += lineHeight;
 
-      unassignedPeople.forEach((person: any) => {
-        pdf.setFontSize(10)
-        pdf.text(`  ${person.name} - ${person.title}, ${person.company}`, 25, yPosition)
-        yPosition += lineHeight - 1
+      unassigned.forEach((person: any) => {
+        pdf.setFontSize(10);
+        pdf.text(
+          `  ${person.name} - ${person.title}, ${person.company}`,
+          25,
+          yPosition
+        );
+        yPosition += lineHeight - 1;
 
         if (yPosition > 280) {
-          pdf.addPage()
-          yPosition = 20
+          pdf.addPage();
+          yPosition = 20;
         }
-      })
+      });
     }
 
-    // Save the PDF
-    pdf.save(`seating-map-${new Date().toISOString().split("T")[0]}.pdf`)
+    // Save final PDF
+    pdf.save(`seating-map-${new Date().toISOString().split("T")[0]}.pdf`);
   } catch (error) {
-    console.error("Error generating PDF:", error)
-    throw error
+    console.error("Error generating PDF:", error);
+    throw error;
   }
 }
