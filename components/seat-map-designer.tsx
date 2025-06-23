@@ -11,7 +11,11 @@ import { ToolsSidebar } from "./tools-sidebar";
 import { Canvas } from "./canvas";
 import { ExportDialog } from "./export-dialog";
 import { PersonAssignDialog } from "./person-assign-dialog";
-import { generateMockPeople } from "@/lib/mock-data";
+import {
+  generateMockPeople,
+  generateDemoTables,
+  generateDemoAssignments,
+} from "@/lib/mock-data";
 import type { Person, Table, Stage, SeatAssignment } from "@/lib/types";
 
 export function SeatMapDesigner() {
@@ -20,9 +24,9 @@ export function SeatMapDesigner() {
   const [stage, setStage] = useState<Stage>({
     id: "stage",
     x: 400,
-    y: 50,
-    width: 200,
-    height: 80,
+    y: 20,
+    width: 250,
+    height: 100,
   });
   const [seatAssignments, setSeatAssignments] = useState<SeatAssignment[]>([]);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -36,10 +40,16 @@ export function SeatMapDesigner() {
 
   const canvasRef = useRef<HTMLDivElement>(null);
 
-  // Generate people only on client side to avoid hydration mismatch
+  // Generate demo data only on client side to avoid hydration mismatch
   useEffect(() => {
     setIsClient(true);
-    setPeople(generateMockPeople(50));
+    const mockPeople = generateMockPeople(50);
+    const demoTables = generateDemoTables();
+    const demoAssignments = generateDemoAssignments(demoTables, mockPeople);
+
+    setPeople(mockPeople);
+    setTables(demoTables);
+    setSeatAssignments(demoAssignments);
   }, []);
 
   const addTable = useCallback(
@@ -143,7 +153,7 @@ export function SeatMapDesigner() {
             Loading Seating Map Designer...
           </div>
           <div className="text-sm text-muted-foreground mt-2">
-            Preparing your workspace
+            Preparing your demo workspace
           </div>
         </div>
       </div>
